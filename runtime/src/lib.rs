@@ -155,7 +155,7 @@ parameter_types! {
 	pub const KittyOwnedLimit: u32 = 3;
 
 	// dapps
-	pub const DappOwnedLimit: u32 = 5;
+	pub const DappOwnedLimit: u32 = 20;
 }
 
 // Configure FRAME pallets to include in runtime.

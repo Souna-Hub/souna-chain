@@ -100,6 +100,17 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	// Storage Dapps installed
+	#[pallet::storage]
+	#[pallet::getter(fn dapp_installed)]
+	pub type DappsInstalled<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		BoundedVec<T::Hash, T::DappOwnedLimit>,
+		ValueQuery,
+	>;
+
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
 	#[pallet::event]
@@ -109,6 +120,7 @@ pub mod pallet {
 		/// parameters. [something, who]
 		DappCreated(T::AccountId, T::Hash),
 		DappTransferred(T::AccountId, T::AccountId, T::Hash),
+		DappInstalled(T::AccountId, T::Hash),
 	}
 
 	// Errors inform users that something went wrong.
@@ -188,6 +200,31 @@ pub mod pallet {
 
 			// Emit an event.
 			Self::deposit_event(Event::DappCreated(owner.clone(), id));
+
+			// Return a successful DispatchResultWithPostInfo
+			Ok(())
+		}
+
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		pub fn install_dapp(origin: OriginFor<T>, id: T::Hash) -> DispatchResult {
+			// Check signed
+			let owner = ensure_signed(origin)?;
+
+			log::info!("==> {:?}", id);
+
+			// Update dapps owned
+			let mut dapps_installed = DappsInstalled::<T>::get(&owner);
+			dapps_installed
+				.try_push(id.clone())
+				.map_err(|_| <Error<T>>::OverDappOwnedLimit)?;
+
+			log::info!("==> {:?}", dapps_installed);
+
+			// Update storage
+			<DappsInstalled<T>>::insert(&owner, dapps_installed);
+
+			// Emit an event.
+			Self::deposit_event(Event::DappInstalled(owner.clone(), id));
 
 			// Return a successful DispatchResultWithPostInfo
 			Ok(())
