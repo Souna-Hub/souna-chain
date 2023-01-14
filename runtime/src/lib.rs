@@ -50,6 +50,9 @@ pub use pallet_template;
 /// Import the template pallet.
 pub use pallet_kitties;
 
+/// Import the template pallet.
+pub use pallet_dapp_store;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -150,6 +153,9 @@ parameter_types! {
 
 	// kitties
 	pub const KittyOwnedLimit: u32 = 3;
+
+	// dapps
+	pub const DappOwnedLimit: u32 = 20;
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -286,6 +292,14 @@ impl pallet_kitties::Config for Runtime {
 	type KittyRandomDna = RandomnessCollectiveFlip;
 }
 
+/// Configure the pallet-dapp-store in pallets/dapp-store.
+impl pallet_dapp_store::Config for Runtime {
+	type Event = Event;
+	type Time = Timestamp;
+	type DappOwnedLimit = DappOwnedLimit;
+	type DappRandomId = RandomnessCollectiveFlip;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -305,6 +319,7 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
 		KittiesModule: pallet_kitties,
+		DappStoreModule: pallet_dapp_store,
 	}
 );
 
@@ -351,6 +366,7 @@ mod benches {
 		[pallet_timestamp, Timestamp]
 		[pallet_template, TemplateModule]
 		[pallet_kitties, KittiesModule]
+		[pallet_dapp_store, DappStoreModule]
 	);
 }
 
