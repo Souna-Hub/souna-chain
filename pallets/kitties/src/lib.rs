@@ -25,6 +25,7 @@ pub mod pallet {
 		BoundedVec,
 	};
 	use frame_system::pallet_prelude::*;
+	use sp_std::vec::Vec;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -38,6 +39,7 @@ pub mod pallet {
 		pub dna: T::Hash,
 		pub owner: T::AccountId,
 		pub price: u64,
+		pub image_url: Vec<u8>,
 		pub gender: Gender,
 		pub created_date: <<T as Config>::Time as Time>::Moment,
 	}
@@ -116,6 +118,7 @@ pub mod pallet {
 		SomethingStored(u32, T::AccountId),
 		KittyCreated(T::AccountId, T::Hash),
 		KittyTransferred(T::AccountId, T::AccountId, T::Hash),
+		KittyDefaultListGenerated(T::AccountId),
 	}
 
 	// Errors inform users that something went wrong.
@@ -154,17 +157,18 @@ pub mod pallet {
 			// Get create date
 			let created_date = T::Time::now();
 
+			// image kitty
+			let image_url_origin = "https://img.cryptokitties.co/0x06012c8cf97bead5deae237070f9587f8e7a266d/1450983.png";
+			let image_url = image_url_origin.chars().map(|c| c as u8).collect::<Vec<_>>();
 			// Create new kitty instance
 			let kitty = Kitty::<T> {
 				dna: dna.clone(),
 				owner: owner.clone(),
 				price: 0,
 				gender,
+				image_url,
 				created_date,
 			};
-
-			// Log debug kitty instance
-			log::info!("==> {:?}", kitty);
 
 			// Check kitty overflow
 			let current_id = <CountKitty<T>>::get();
@@ -182,7 +186,7 @@ pub mod pallet {
 			<Kitties<T>>::insert(dna.clone(), kitty);
 
 			// Emit an event.
-			Self::deposit_event(Event::KittyCreated(owner.clone(), dna));
+			Self::deposit_event(Event::KittyCreated(owner.clone(), dna.clone()));
 
 			// Return a successful DispatchResultWithPostInfo
 			Ok(())
@@ -219,6 +223,56 @@ pub mod pallet {
 
 			// Emit an event.
 			Self::deposit_event(Event::KittyTransferred(from.clone(), to.clone(), dna.clone()));
+
+			// Return a successful DispatchResultWithPostInfo
+			Ok(())
+		}
+
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		pub fn generate_default_kitty_list(origin: OriginFor<T>) -> DispatchResult {
+			// Check that the extrinsic was signed and get the signer.
+			// This function will return an error if the extrinsic is not signed.
+			// https://docs.substrate.io/main-docs/build/origins/
+
+			let mut kittyDefautUrl = "https://img.cryptokitties.co/0x06012c8cf97bead5deae237070f9587f8e7a266d/1450983.png".chars().map(|c| c as u8).collect::<Vec<_>>();
+
+			let owner = ensure_signed(origin)?;
+
+			for i in 0..10 {
+				// Generate dna for kitty
+				let dna = Self::generate_dna()?;
+
+				// Check gender
+				let gender = Self::generate_gender(dna.clone())?;
+
+				// Get create date
+				let created_date = T::Time::now();
+
+				// Create new kitty instance
+				let kitty = Kitty::<T> {
+					dna: dna.clone(),
+					owner: owner.clone(),
+					price: 0,
+					image_url: kittyDefautUrl.clone(),
+					gender,
+					created_date,
+				};
+
+				// Update kitties owned
+				let mut kitties_owned = KittiesOwned::<T>::get(&owner);
+				kitties_owned
+					.try_push(dna.clone())
+					.map_err(|_| <Error<T>>::OverKittyOwnedLimit)?;
+
+				<KittiesOwned<T>>::insert(&owner, kitties_owned);
+				<Kitties<T>>::insert(dna.clone(), kitty);
+			}
+
+			// Update storage
+			<CountKitty<T>>::put(10);
+
+			// Emit an event.
+			Self::deposit_event(Event::KittyDefaultListGenerated(owner.clone()));
 
 			// Return a successful DispatchResultWithPostInfo
 			Ok(())
