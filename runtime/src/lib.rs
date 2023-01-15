@@ -152,7 +152,7 @@ parameter_types! {
 
 
 	// kitties
-	pub const KittyOwnedLimit: u32 = 3;
+	pub const KittyOwnedLimit: u32 = 30;
 
 	// dapps
 	pub const DappOwnedLimit: u32 = 20;
